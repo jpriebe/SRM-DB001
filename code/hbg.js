@@ -10,6 +10,8 @@ var kit = new HbgKit();
 
 var _init = false;
 
+var _hbg_loop_len = 2048;
+
 function liveInit() {
     post("[liveInit] entering...\n")
     _init = true;
@@ -29,34 +31,73 @@ function regen() {
 
 // loads the steps into the grid
 function sendSteps() {
+    var i;
+
     post("[sendSteps]\n");
     var patterns = _gen.getPatterns()
-    post (patterns)
+    post(patterns)
 
     dg1 = this.patcher.getnamed("drumGrid1")
 
+    var drums = [
+        'kick',
+        'clap',
+        'snare',
+        'closedhat',
+        'openhat',
+        'shaker',
+        'perc1',
+        'perc2',
+        'ride'
+    ]
+
+    var all_notes = {};
+    for (i = 0; i < drums.length; i++) {
+        all_notes[drums[i]] = [];
+    }
+
     for (var identifier in patterns) {
-      if (!patterns.hasOwnProperty(identifier)) {
-        continue
-      }
-      post("[sendSteps] " + identifier + "\n");
+        if (!patterns.hasOwnProperty(identifier)) {
+            continue
+        }
+        post("[sendSteps] pattern " + identifier + "\n");
 
-      var pattern = patterns[identifier]
-      var notes = {};
-      post("[sendSteps] " + pattern + "\n");
-      // reset the first 64 16th notes to 0
-      dg1.message("clear");
-      for (i = 0; i < pattern.notes.length; i++) {
-          post(JSON.stringify(pattern.notes[i]) + "\n")
-          var x = Math.floor(pattern.notes[i].start / 32) + 1;
-          var y = 1;
-          //var msg = "input-list " + x + " " + y + " 1";
-          var msg = "list " + x + " " + y + " 1.";
-          post("[sendSteps] " + msg + "\n");
-          dg1.message("list", x, y, 1)
-      }
+        var pattern = patterns[identifier]
+        var notes = {};
+        // reset the first 64 16th notes to 0
+        dg1.message("clear");
 
-      break;
+        loop_len = 0;
+        while (loop_len < _hbg_loop_len) {
+            for (i = 0; i < pattern.notes.length; i++) {
+                var note = {
+                    drum: pattern.notes[i].drum,
+                    velocity: pattern.notes[i].velocity,
+                    start: pattern.notes[i].start + loop_len,
+                    duration: pattern.notes[i].duration,
+                }
+                all_notes[pattern.notes[i].drum].push(note);
+                post("[sendSteps]   " + note.drum + " " + note.start + "\n");
+            }
+            loop_len += pattern.length;
+        }
+    }
+
+    for (i = 0; i < drums.length; i++) {
+        var drum = drums[i];
+        var notes = all_notes[drum];
+
+        post("[sendSteps] drum " + drum + " - " + notes.length + " notes\n");
+
+        for (j = 0; j < notes.length; j++) {
+            post(JSON.stringify(notes[j]) + "\n")
+            var x = Math.floor(notes[j].start / 32) + 1;
+            var y = i + 1;
+            //var msg = "input-list " + x + " " + y + " 1";
+            var msg = "list " + x + " " + y + " 1.";
+            post("[sendSteps] " + msg + "\n");
+            dg1.message("list", x, y, 1)
+        }
     }
 
     /*
