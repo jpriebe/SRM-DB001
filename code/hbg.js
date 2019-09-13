@@ -4,68 +4,151 @@ autowatch = 1;
 
 include("lm.js");
 
-var PatternGenerator = require('./patternGenerator').patternGenerator;
-var HbgKit = require('./hbgKit').hbgKit;
-var kit = new HbgKit();
-
 var _init = false;
 
-var _hbg_loop_len = 2048;
+var PatternGenerator = require('./patternGenerator').patternGenerator;
+var HbgKit = require('./hbgKit').hbgKit;
+var _kit = new HbgKit();
+
+var _hbg_loop_len = 2048; // 4 bars
+
+// this array dictates the order in which the notes are loaded into the live.grid
+var _drums = [
+    'kick',
+    'clap',
+    'snare',
+    'closedhat',
+    'openhat',
+    'shaker',
+    'perc1',
+    'perc2',
+    'ride'
+]
+
+var _drum_groups = [
+    'kick',
+    'mid-primary',
+    'mid-secondary',
+    'tops-primary',
+    'tops-secondary',
+    'perc',
+    'tops-power',
+];
+
+var _section = 'hardtrack2';
+var _sections = {};
+var _section_menu_items = {
+    'mix-in': 'mixin',
+    'hard track 1': 'hardtrack1',
+    'breakdown 1': 'breakdown1',
+    'hard track 2': 'hardtrack2',
+    'breakdown 2': 'breakdown2',
+    'hard track 3': 'hardtrack3',
+    'mix-out': 'mixout',
+}
+
+var _locks = {}
+
+var _gen;
 
 function liveInit() {
-    post("[liveInit] entering...\n")
+    if (_init) {
+        return;
+    }
+
+    post("[liveInit] initializing locks...\n")
+    for (var i = 0; i < _drum_groups.length; i++) {
+        _locks[_drum_groups[i]] = 0;
+    }
+
+    post("[liveInit] creating pattern generator...\n")
+    _gen = new PatternGenerator(_kit);
+
+    post("[liveInit] getting sections...\n")
+    _sections = _gen.getSections();
+
+    post("[liveInit] selecting first pattern...\n")
+    _gen.selectPatterns();
+
+    post("[liveInit] generating and sending notes...\n")
+    regen();
+
     _init = true;
     post("[liveInit] done.\n")
 }
 
-var _gen = new PatternGenerator(kit);
-_gen.selectPatterns();
-sendSteps();
+function toggleLock (section, value) {
+    _locks[section] = value;
+}
+
+function changeSection (section) {
+    if (!_init) {
+        return;
+    }
+    post("[changeSection] received: " + section + "\n");
+    _section = _section_menu_items[section];
+    post("[changeSection] new section: " + _section + "\n");
+    var all_notes = generateAllNotes();
+    sendSteps(all_notes);
+}
+
 
 // called when user clicks regen
 function regen() {
-    post("[regen]\n");
-    _gen.selectPatterns();
-    sendSteps();
+    post("[regen] entering\n");
+
+    for (var i = 0; i < _drum_groups.length; i++) {
+        var g = _drum_groups[i];
+        if (_locks[g]) {
+            post("[regen] skipping drum group: " + g + "\n");
+            continue;
+        }
+        post("[regen] drum group: " + g + "\n");
+
+        _gen.selectPattern(g);
+    }
+
+    var all_notes = generateAllNotes();
+    sendSteps(all_notes);
 }
 
 // loads the steps into the grid
-function sendSteps() {
+function generateAllNotes() {
     var i;
 
-    post("[sendSteps]\n");
+    post("[generateAllNotes] entering\n");
     var patterns = _gen.getPatterns()
     post(patterns)
 
-    dg1 = this.patcher.getnamed("drumGrid1")
-
-    var drums = [
-        'kick',
-        'clap',
-        'snare',
-        'closedhat',
-        'openhat',
-        'shaker',
-        'perc1',
-        'perc2',
-        'ride'
-    ]
-
     var all_notes = {};
-    for (i = 0; i < drums.length; i++) {
-        all_notes[drums[i]] = [];
+    for (i = 0; i < _drums.length; i++) {
+        all_notes[_drums[i]] = [];
     }
 
-    for (var identifier in patterns) {
-        if (!patterns.hasOwnProperty(identifier)) {
-            continue
-        }
-        post("[sendSteps] pattern " + identifier + "\n");
+    var active_drum_groups = _sections[_section];
+    post("[generateAllNotes] current section: " + _section + "\n");
 
-        var pattern = patterns[identifier]
+    for (var drum_group in patterns) {
+        if (!patterns.hasOwnProperty(drum_group)) {
+            continue;
+        }
+
+        function inArray(needle, haystack) {
+            var length = haystack.length;
+            for(var i = 0; i < length; i++) {
+                if(haystack[i] == needle) return true;
+            }
+            return false;
+        }
+
+        if (!inArray(drum_group, active_drum_groups)) {
+            continue;
+        }
+
+        post("[generateAllNotes] pattern " + drum_group + "\n");
+
+        var pattern = patterns[drum_group]
         var notes = {};
-        // reset the first 64 16th notes to 0
-        dg1.message("clear");
 
         loop_len = 0;
         while (loop_len < _hbg_loop_len) {
@@ -77,14 +160,21 @@ function sendSteps() {
                     duration: pattern.notes[i].duration,
                 }
                 all_notes[pattern.notes[i].drum].push(note);
-                post("[sendSteps]   " + note.drum + " " + note.start + "\n");
+                post("[generateAllNotes]   " + note.drum + " " + note.start + "\n");
             }
             loop_len += pattern.length;
         }
     }
 
-    for (i = 0; i < drums.length; i++) {
-        var drum = drums[i];
+    return all_notes;
+}
+
+function sendSteps (all_notes) {
+    dg1 = this.patcher.getnamed("drumGrid1")
+    dg1.message("clear");
+
+    for (i = 0; i < _drums.length; i++) {
+        var drum = _drums[i];
         var notes = all_notes[drum];
 
         post("[sendSteps] drum " + drum + " - " + notes.length + " notes\n");
@@ -220,3 +310,5 @@ function callPatternStepDump() {
     var patternStep = this.patcher.getnamed("patternStep");
     patternStep.message("dump");
 }
+
+liveInit();
