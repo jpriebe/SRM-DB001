@@ -11,6 +11,7 @@ var HbgKit = require('./hbgKit').hbgKit;
 var _kit = new HbgKit();
 
 var _hbg_loop_len = 2048; // 4 bars
+var _hbg_num_beats = 16;
 
 // this array dictates the order in which the notes are loaded into the live.grid
 var _drums = [
@@ -24,6 +25,18 @@ var _drums = [
     'perc2',
     'ride'
 ]
+
+var _drum_pitch = {
+    'kick': 36,
+    'clap': 37,
+    'snare': 38,
+    'closedhat': 39,
+    'openhat': 44,
+    'shaker': 45,
+    'perc1': 46,
+    'perc2': 47,
+    'ride': 52,
+}
 
 var _drum_groups = [
     'kick',
@@ -40,7 +53,7 @@ var _sections = {};
 var _section_menu_items = {
     'mix-in': 'mixin',
     'hard track 1': 'hardtrack1',
-    'breakdown 1': 'breakdown1',
+    'breakdown 1': 'breakdown',
     'hard track 2': 'hardtrack2',
     'breakdown 2': 'breakdown2',
     'hard track 3': 'hardtrack3',
@@ -112,6 +125,80 @@ function regen() {
     sendSteps(all_notes);
 }
 
+function generateClips () {
+    post ("[generateClips] entering...\n");
+
+    for (var i = 0; i < _sections.length; i++) {
+        var section = _sections[i]
+    }
+    for (var section in _sections) {
+        if (!_sections.hasOwnProperty(section)) {
+            continue;
+        }
+        post ("[generateClips]  - " + _section + "\n");
+        var notes_by_drum_group = generateAllNotes();
+
+        var all_notes = [];
+        for (var drum_group in notes_by_drum_group) {
+            var notes = notes_by_drum_group[drum_group];
+            for (var j = 0; j < notes.length; j++) {
+                all_notes.push (notes[j]);
+            }
+        }
+
+        generateClip (section, all_notes)
+    }
+
+    post ("[generateClips] done.\n")
+}
+
+function generateClip (label, notes) {
+    var track = new LiveAPI("this_device canonical_parent");
+    var clipSlots = track.getcount("clip_slots");
+    var clipSlot;
+
+    var firstClip = null;
+
+    for (var clipSlotNum = 0; clipSlotNum < clipSlots; clipSlotNum++) {
+        clipSlot = new LiveAPI("this_device canonical_parent clip_slots " + clipSlotNum);
+        var hasClip = clipSlot.get("has_clip").toString() !== "0";
+        if (!hasClip) break;
+    }
+
+    if (clipSlotNum === clipSlots) {
+        // have to create new clip slot (scene)
+        var set = new LiveAPI("live_set");
+        set.call("create_scene", -1);
+        clipSlot = new LiveAPI("this_device canonical_parent clip_slots " + clipSlotNum);
+    }
+
+    post("[generateClip] creating clip in slot " + clipSlotNum + "\n")
+
+    post("[generateClip] setting notes in clip; num notes: " + notes.length + "\n")
+
+    clipSlot.call("create_clip", _hbg_num_beats);
+    var clip = new LiveAPI("this_device canonical_parent clip_slots " + clipSlotNum + " clip");
+
+    clip.set("name", label);
+
+    clip.call("set_notes");
+    post("clip.call(notes, " + notes.length + ")")
+    clip.call("notes", notes.length);
+
+    for (var i = 0; i < notes.length; i++) {
+        var note = notes[i];
+        //post ("[generateClip]   - " + JSON.stringify(note) + "\n")
+        var start = (note.start / 128).toFixed(4);
+        var duration = (note.duration / 128).toFixed(4);
+        var velocity = note.velocity;
+        var pitch = _drum_pitch[note.drum]
+
+        clip.call("note", pitch, start, duration, velocity);
+    }
+
+    clip.call("done");
+}
+
 // loads the steps into the grid
 function generateAllNotes() {
     var i;
@@ -160,7 +247,7 @@ function generateAllNotes() {
                     duration: pattern.notes[i].duration,
                 }
                 all_notes[pattern.notes[i].drum].push(note);
-                post("[generateAllNotes]   " + note.drum + " " + note.start + "\n");
+                //post("[generateAllNotes]   " + note.drum + " " + note.start + "\n");
             }
             loop_len += pattern.length;
         }
@@ -180,12 +267,11 @@ function sendSteps (all_notes) {
         post("[sendSteps] drum " + drum + " - " + notes.length + " notes\n");
 
         for (j = 0; j < notes.length; j++) {
-            post(JSON.stringify(notes[j]) + "\n")
             var x = Math.floor(notes[j].start / 32) + 1;
             var y = i + 1;
             //var msg = "input-list " + x + " " + y + " 1";
             var msg = "list " + x + " " + y + " 1.";
-            post("[sendSteps] " + msg + "\n");
+            //post("[sendSteps] " + msg + "\n");
             dg1.message("list", x, y, 1)
         }
     }
@@ -198,117 +284,6 @@ function sendSteps (all_notes) {
         outlet(0, "step", i + 1, step.note, step.velocity, 120, step.probability)
     }
     */
-}
-
-function clipOut() {
-    var track = new LiveAPI("this_device canonical_parent");
-    var clipSlots = track.getcount("clip_slots");
-    var clipSlot;
-
-    var firstClip = null;
-
-    for (var clipSlotNum = 0; clipSlotNum < clipSlots; clipSlotNum++) {
-        clipSlot = new LiveAPI("this_device canonical_parent clip_slots " + clipSlotNum);
-        var hasClip = clipSlot.get("has_clip").toString() !== "0";
-        if (!hasClip) break;
-    }
-
-    if (clipSlotNum === clipSlots) {
-        // have to create new clip slot (scene)
-        var set = new LiveAPI("live_set");
-        set.call("create_scene", -1);
-        clipSlot = new LiveAPI("this_device canonical_parent clip_slots " + clipSlotNum);
-    }
-
-    post("Creating clip in slot " + clipSlotNum + "\n")
-
-    post("Setting notes in clip; num notes: " + _live_steps_len + "\n")
-
-    var beats = Math.ceil(_live_steps_len / 4);
-    post("num beats: " + beats + "\n")
-
-    clipSlot.call("create_clip", beats);
-    var clip = new LiveAPI("this_device canonical_parent clip_slots " + clipSlotNum + " clip");
-    //var notes = generateMidi();
-
-    post("Setting notes in clip...\n")
-
-    setClipNotes(clip);
-}
-
-// called once for each note output by the live.step when it receives the "dump" message;
-// dump starts when user clicks the "clip" button
-function dumpStep(s, i, pitch, velocity, duration) {
-    post("received dump step: " + s + ", " + i + ", " + pitch + ", " + velocity + "\n");
-    if (s !== 'step') {
-        post("ignoring dump of type " + s + "\n")
-    }
-    if (i === 1) {
-        _live_steps = [];
-    }
-
-    _live_steps[i - 1] = {
-        pitch: pitch,
-        velocity: velocity,
-        duration: duration,
-    }
-    _live_steps_len = i;
-
-    if (i === _steps.length) {
-        clipOut();
-    }
-}
-
-function setClipNotes(clip) {
-    clip.call("set_notes");
-
-    nonZeroCount = 0;
-    for (var i = 0; i < _live_steps_len; i++) {
-        var step = _live_steps[i];
-        if (step.velocity > 0) {
-            nonZeroCount++;
-        }
-    }
-
-    post("clip.call(notes, " + nonZeroCount + ")")
-    clip.call("notes", nonZeroCount);
-
-    for (var i = 0; i < _live_steps_len; i++) {
-        var step = _live_steps[i];
-        if (step.velocity === 0) {
-            continue;
-        }
-        post(JSON.stringify(step) + "\n")
-        var start = (i / 4).toFixed(4);
-        var duration = (step.duration / 480).toFixed(4);
-        clip.call("note", step.pitch, start, duration, step.velocity);
-    }
-
-    clip.call("done");
-}
-
-
-function replaceAllNotes(clip, notes) {
-    clip.call("select_all_notes");
-    clip.call("replace_selected_notes");
-    clip.call("notes", notes.length);
-
-    for (var i = 0; i < notes.length; i++) {
-        var note = notes[i];
-        callNote(clip, note);
-    }
-
-    clip.call("done");
-}
-
-
-function callNote(clip, note) {
-    clip.call("note", note.Pitch, note.Start.toFixed(4), note.Duration.toFixed(4), note.Velocity, note.Muted);
-}
-
-function callPatternStepDump() {
-    var patternStep = this.patcher.getnamed("patternStep");
-    patternStep.message("dump");
 }
 
 liveInit();
