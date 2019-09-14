@@ -1,0 +1,10 @@
+- clip output (all 5 clips)
+
+- add controls:
+   - regen of individual parts
+   - config drums
+
+- extend patterns to 8 bars (not sure how -- use a really long grid?  use two grids that swap in and out?)
+
+- add support for fills at 4 bars and 8 bars
+
