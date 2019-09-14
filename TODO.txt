@@ -1,4 +1,8 @@
+BUG: breakdown 1 not working?
+
 - clip output (all 5 clips)
+
+- support for note velocity
 
 - add controls:
    - regen of individual parts
