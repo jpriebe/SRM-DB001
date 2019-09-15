@@ -26,6 +26,8 @@ var _drums = [
     'ride'
 ]
 
+var _muted = {};
+
 var _drum_pitch = {
     'kick': 36,
     'clap': 37,
@@ -69,9 +71,14 @@ function liveInit() {
         return;
     }
 
+    var i;
     post("[liveInit] initializing locks...\n")
-    for (var i = 0; i < _drum_groups.length; i++) {
+    for (i = 0; i < _drum_groups.length; i++) {
         _locks[_drum_groups[i]] = 0;
+    }
+
+    for (i = 0; i < _drums.length; i++) {
+        _muted[_drums[i]] = false;
     }
 
     post("[liveInit] creating pattern generator...\n")
@@ -90,9 +97,25 @@ function liveInit() {
     post("[liveInit] done.\n")
 }
 
+// called when user clicks a lock toggle in the UI
 function toggleLock (section, value) {
     _locks[section] = value;
 }
+
+// called when user clicks a mute toggle in the UI
+function mute (drum, value) {
+    var idx = drum - 1;
+    drum = _drums[idx];
+    if (value) {
+        _muted[drum] = false;
+        post ("[mute] " + drum + ": false\n");
+    }
+    else {
+        _muted[drum] = true;
+        post ("[mute] " + drum + ": true\n");
+    }
+}
+
 
 function changeSection (section) {
     if (!_init) {
@@ -128,7 +151,7 @@ function regen() {
 function generateClips () {
     post ("[generateClips] entering...\n");
 
-    for (var i = 0; i < _sections.length; i++) {
+    for (i = 0; i < _sections.length; i++) {
         var section = _sections[i]
     }
     for (var section in _sections) {
@@ -142,6 +165,9 @@ function generateClips () {
         for (var drum_group in notes_by_drum_group) {
             var notes = notes_by_drum_group[drum_group];
             for (var j = 0; j < notes.length; j++) {
+                if (_muted[notes[j].drum]) {
+                    continue;
+                }
                 all_notes.push (notes[j]);
             }
         }
@@ -257,7 +283,7 @@ function generateAllNotes() {
 }
 
 function sendSteps (all_notes) {
-    dg1 = this.patcher.getnamed("drumGrid1")
+    var dg1 = this.patcher.getnamed("drumGrid1")
     dg1.message("clear");
 
     for (i = 0; i < _drums.length; i++) {
