@@ -27,6 +27,7 @@ var _drums = [
 ]
 
 var _muted = {};
+var _offsets = {};
 
 var _drum_pitch = {
     'kick': 36,
@@ -79,6 +80,7 @@ function liveInit() {
 
     for (i = 0; i < _drums.length; i++) {
         _muted[_drums[i]] = false;
+        _offsets[_drums[i]] = 0;
     }
 
     post("[liveInit] creating pattern generator...\n")
@@ -117,6 +119,18 @@ function mute (drum, value) {
 }
 
 
+// called when user clicks a shift button in the UI
+function shift (drum, value) {
+    var idx = drum - 1;
+    drum = _drums[idx];
+
+    _offsets[drum] += value;
+    post ("[shift] offsets: " + JSON.stringify(_offsets));
+    var all_notes = generateAllNotes();
+    sendSteps(all_notes);
+}
+
+
 function changeSection (section) {
     if (!_init) {
         return;
@@ -132,6 +146,10 @@ function changeSection (section) {
 // called when user clicks regen
 function regen() {
     post("[regen] entering\n");
+
+    for (i = 0; i < _drums.length; i++) {
+        _offsets[_drums[i]] = 0;
+    }
 
     for (var i = 0; i < _drum_groups.length; i++) {
         var g = _drum_groups[i];
@@ -225,7 +243,7 @@ function generateClip (label, notes) {
     clip.call("done");
 }
 
-// loads the steps into the grid
+// gather all notes from patterns
 function generateAllNotes() {
     var i;
 
@@ -266,10 +284,15 @@ function generateAllNotes() {
         loop_len = 0;
         while (loop_len < _hbg_loop_len) {
             for (i = 0; i < pattern.notes.length; i++) {
+                var d = pattern.notes[i].drum;
+                var start = pattern.notes[i].start + loop_len;
+                var offset = _offsets[d] * 32;
+                var new_start = (start + offset) % _hbg_loop_len;
+                //post("[generateAllNotes]   " + d + " " + start + ", " + offset + ", " + new_start + "\n");
                 var note = {
-                    drum: pattern.notes[i].drum,
+                    drum: d,
                     velocity: pattern.notes[i].velocity,
-                    start: pattern.notes[i].start + loop_len,
+                    start: new_start,
                     duration: pattern.notes[i].duration,
                 }
                 all_notes[pattern.notes[i].drum].push(note);
