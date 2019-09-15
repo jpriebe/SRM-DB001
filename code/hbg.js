@@ -177,8 +177,9 @@ function generateClips () {
             continue;
         }
         post ("[generateClips]  - " + _section + "\n");
+        _section = section
         var notes_by_drum_group = generateAllNotes();
-
+        
         var all_notes = [];
         for (var drum_group in notes_by_drum_group) {
             var notes = notes_by_drum_group[drum_group];
