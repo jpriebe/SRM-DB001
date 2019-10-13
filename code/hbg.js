@@ -110,11 +110,9 @@ function mute (drum, value) {
     drum = _drums[idx];
     if (value) {
         _muted[drum] = false;
-        post ("[mute] " + drum + ": false\n");
     }
     else {
         _muted[drum] = true;
-        post ("[mute] " + drum + ": true\n");
     }
 }
 
@@ -125,7 +123,7 @@ function shift (drum, value) {
     drum = _drums[idx];
 
     _offsets[drum] += value;
-    post ("[shift] offsets: " + JSON.stringify(_offsets));
+    //post ("[shift] offsets: " + JSON.stringify(_offsets));
     var all_notes = generateAllNotes();
     sendSteps(all_notes);
 }
@@ -135,9 +133,7 @@ function changeSection (section) {
     if (!_init) {
         return;
     }
-    post("[changeSection] received: " + section + "\n");
     _section = _section_menu_items[section];
-    post("[changeSection] new section: " + _section + "\n");
     var all_notes = generateAllNotes();
     sendSteps(all_notes);
 }
@@ -167,8 +163,6 @@ function regen() {
 }
 
 function generateClips () {
-    post ("[generateClips] entering...\n");
-
     for (i = 0; i < _sections.length; i++) {
         var section = _sections[i]
     }
@@ -193,8 +187,6 @@ function generateClips () {
 
         generateClip (section, all_notes)
     }
-
-    post ("[generateClips] done.\n")
 }
 
 function generateClip (label, notes) {
@@ -218,7 +210,6 @@ function generateClip (label, notes) {
     }
 
     post("[generateClip] creating clip in slot " + clipSlotNum + "\n")
-
     post("[generateClip] setting notes in clip; num notes: " + notes.length + "\n")
 
     clipSlot.call("create_clip", _hbg_num_beats);
@@ -235,7 +226,7 @@ function generateClip (label, notes) {
         //post ("[generateClip]   - " + JSON.stringify(note) + "\n")
         var start = (note.start / 128).toFixed(4);
         var duration = (note.duration / 128).toFixed(4);
-        var velocity = note.velocity;
+        var velocity = Math.floor(note.velocity / 100 * 128);
         var pitch = _drum_pitch[note.drum]
 
         clip.call("note", pitch, start, duration, velocity);
@@ -289,7 +280,9 @@ function generateAllNotes() {
                 var start = pattern.notes[i].start + loop_len;
                 var offset = _offsets[d] * 32;
                 var new_start = (start + offset) % _hbg_loop_len;
-                //post("[generateAllNotes]   " + d + " " + start + ", " + offset + ", " + new_start + "\n");
+                if (new_start < 0) {
+                    new_start += _hbg_loop_len;
+                }
                 var note = {
                     drum: d,
                     velocity: pattern.notes[i].velocity,
@@ -307,6 +300,18 @@ function generateAllNotes() {
 }
 
 function sendSteps (all_notes) {
+    var i;
+    var dg1 = this.patcher.getnamed("drumGrid1")
+    dg1.message("clear");
+
+    var velocity_tables = []
+    for (i = 0; i < _drums.length; i++) {
+        var i1 = i + 1;
+        var t = this.patcher.getnamed("tblVelocity" + i1);
+        velocity_tables.push(t);
+        t.message("clear");
+    }
+
     var dg1 = this.patcher.getnamed("drumGrid1")
     dg1.message("clear");
 
@@ -319,10 +324,12 @@ function sendSteps (all_notes) {
         for (j = 0; j < notes.length; j++) {
             var x = Math.floor(notes[j].start / 32) + 1;
             var y = i + 1;
-            //var msg = "input-list " + x + " " + y + " 1";
-            var msg = "list " + x + " " + y + " 1.";
-            //post("[sendSteps] " + msg + "\n");
-            dg1.message("list", x, y, 1)
+            //var v = Math.floor(Math.random() * 128)
+            var v = Math.floor(notes[j].velocity / 100 * 128);
+            var msg = "list " + x + " " + y + " (" + v + ")";
+            post("[sendSteps] " + msg + "\n");
+            dg1.message("list", x, y, 1);
+            velocity_tables[i].message("list", x, v);
         }
     }
 
