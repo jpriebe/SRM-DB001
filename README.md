@@ -22,7 +22,7 @@ DrumRack 128.
 
 You can then play with the parameters and keep regenerating.  When you have something you like, you can click "Gen Clips" to create clips in session view for each of the song sections.
 
-## Drum selector buttons
+## drum selector buttons
 
 To the left of each drum name, there is a checkbox.  Uncheck to mute that particular drum.  Note that if you have the drum unchecked, it will not appear in clips you generate, either.
 
