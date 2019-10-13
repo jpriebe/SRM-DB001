@@ -36,5 +36,5 @@ Select a song section from the dropdown to hear a variant of the beat for that s
 
 ## locks
 
-If you're happy with portions of the beat, but you just want to change out specific parts, you can check the appropriate lock buttons.  Note that these do not correlate 1:1 to the individual drums; some tracks combine multiple drums (for instance, "tops-primary" might be both the open hi-hat and the closed hi-hat).  
+Lock specific drum groups from being regenerated.  If you're happy with portions of the beat, but you just want to change out specific drum groups, you can check the appropriate lock buttons.  Note that the drum groups do not correlate 1:1 to the individual drums; some drum groups combine multiple drums (for instance, "tops-primary" might include both the open hi-hat and the closed hi-hat).  
 
