@@ -318,18 +318,56 @@ function sendSteps (all_notes) {
     for (i = 0; i < _drums.length; i++) {
         var drum = _drums[i];
         var notes = all_notes[drum];
+        var y = i + 1;
 
         post("[sendSteps] drum " + drum + " - " + notes.length + " notes\n");
 
+        if (notes.length < 1) {
+            continue;
+        }
+
+        // we want to populate a table full of note velocities; but rather than having
+        // zeroes in between the non-zeroes, we'll fill in the gaps with the last non-zero
+        // velocity seen; need to account for wraparound, too.
+        var last_nzvelocity = Math.floor(notes[notes.length - 1].velocity / 100 * 128);
+        var last_nzvelocity_x = Math.floor(notes[notes.length - 1].start / 32) + 1;
+        var msg;
+
         for (j = 0; j < notes.length; j++) {
             var x = Math.floor(notes[j].start / 32) + 1;
-            var y = i + 1;
+
+            post("[sendSteps] x: " + x + "\n");
+            post("[sendSteps] last_nzvelocity: " + last_nzvelocity + "\n");
+            post("[sendSteps] last_nzvelocity_x: " + last_nzvelocity_x + "\n");
+            var z_beats = x - last_nzvelocity_x - 1;
+            if (z_beats < 0)  {
+                z_beats += Math.floor(_hbg_loop_len / 32);
+            }
+            post("[sendSteps] z_beats: " + z_beats + "\n");
+
+            for (var k = 0; k < z_beats; k++) {
+                var x1 = (last_nzvelocity_x + k) % Math.floor(_hbg_loop_len / 32) + 1;
+                msg = " * list " + x1 + " " + y + " (" + last_nzvelocity + ")";
+                post("[sendSteps] " + msg + "\n");
+                velocity_tables[i].message("list", x1, last_nzvelocity);
+            }
+
             //var v = Math.floor(Math.random() * 128)
             var v = Math.floor(notes[j].velocity / 100 * 128);
-            var msg = "list " + x + " " + y + " (" + v + ")";
+            msg = "list " + x + " " + y + " (" + v + ")";
             post("[sendSteps] " + msg + "\n");
             dg1.message("list", x, y, 1);
             velocity_tables[i].message("list", x, v);
+
+            last_velocity = v;
+            last_velocity_x = x;
+
+            for (k = last_velocity_x + 1; k < x; k++) {
+                velocity_tables[i].message("list", k, lats_velocity);
+            }
+
+            last_nzvelocity = v;
+            last_nzvelocity_x = x;
         }
     }
 
