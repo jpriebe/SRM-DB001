@@ -8,15 +8,15 @@ DrumRack 128.
 # how to use
 
 - [build a 128 for Drum Rack](https://www.reddit.com/r/ableton/comments/b5osf8/the_last_drum_rack_youll_ever_have_to_make/);  Assign your drums as follows:
- - C1: kick
- - C#1: clap
- - D1: snare
- - D#1: closed hi hat
- - G#1: open hi hat
- - A1: shaker
- - A#1: percussion 1
- - B1: percussion 2
- - E2: ride
+  - C1: kick
+  - C#1: clap
+  - D1: snare
+  - D#1: closed hi hat
+  - G#1: open hi hat
+  - A1: shaker
+  - A#1: percussion 1
+  - B1: percussion 2
+  - E2: ride
 - add SRM-DB001 to your track
 - click "regenerate" to generate a pattern
 
