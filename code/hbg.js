@@ -381,4 +381,4 @@ function sendSteps (all_notes) {
     */
 }
 
-liveInit();
+//liveInit();
