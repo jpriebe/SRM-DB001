@@ -8,7 +8,7 @@ This is a Max for Live device to generate house drumbeats.  It is designed to wo
 
 # how to use
 
-- [build a 128 for Drum Rack](https://www.reddit.com/r/ableton/comments/b5osf8/the_last_drum_rack_youll_ever_have_to_make/);  Assign your drums as follows:
+- [build a 128 for Drum Rack](https://www.reddit.com/r/ableton/comments/b5osf8/the_last_drum_rack_youll_ever_have_to_make/);  assign your drums as follows:
   - C1: kick
   - C#1: clap
   - D1: snare
