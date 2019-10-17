@@ -6,6 +6,13 @@ This is a Max for Live device to generate house drumbeats.  It is designed to wo
 
 ![SRM-DB001 Screenshot](https://github.com/jpriebe/SRM-DB001/blob/master/SRM-DB001-screenshot.png?raw=true)
 
+# examples
+
+These were built with SRM-DB001 and SRM-BL001 with no post processing on the MIDI notes.
+
+- [demo-001](https://soundcloud.com/jason-priebe/srm-demo-001)
+- [demo-002](https://soundcloud.com/jason-priebe/srm-demo-002)
+
 # how to use
 
 - [build a 128 for Drum Rack](https://www.reddit.com/r/ableton/comments/b5osf8/the_last_drum_rack_youll_ever_have_to_make/);  assign your drums as follows:
